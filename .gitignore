@@ -1,0 +1,15 @@
+bdVeroRRM.py
+VeroMesaTools.py
+VeroBfieldTools.py
+VeroRRM.py
+VeroPlotTools.py
+RRM_density_dipole_grid.py
+setup_old.py
+test_cython_code.py
+make_density_grid_from_analytical_function.py
+*.p
+*.h5
+*.so
+*.c
+__pycache__/*
+build/*
