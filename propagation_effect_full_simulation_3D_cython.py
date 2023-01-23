@@ -234,11 +234,12 @@ nu0 = 600.
 dnu = 234 / 2.
 nu = [nu0]#np.linspace(nu0 - dnu, nu0 + dnu, 1)
 rho_fact =0.0001 #500000.
+out_dir         ='/home/dbarnali/postdoc/propagation_effects/input_output_for_density_grid/'
 
 if mode == 1:
-    out_filename = 'cython_X_mode_' + str(int(nu0)) + 'MHz_density_RRM_'+star_name+'_like_rho_fact_'+str(rho_fact)+'.p'
+    out_filename =out_dir+ 'cython_X_mode_' + str(int(nu0)) + 'MHz_density_RRM_'+star_name+'_like_rho_fact_'+str(rho_fact)+'.p'
 if mode == 0:
-    out_filename = 'cython_O_mode_' + str(int(nu0)) + 'MHz_density_RRM_'+star_name+'_like_rho_fact_'+str(rho_fact)+'.p'
+    out_filename =out_dir+ 'cython_O_mode_' + str(int(nu0)) + 'MHz_density_RRM_'+star_name+'_like_rho_fact_'+str(rho_fact)+'.p'
 
 # phiB	=np.array([1.8824224168936852])	#np.array([86.*(np.pi/180.)])
 len_phib = 180
@@ -290,6 +291,7 @@ output_ray_paths['S_ray_path'] = s_ray_path
 
 pickle.dump(output_ray_paths, open(out_filename, 'wb'))
 
+os.system('rm outputs*core*.p')
 
 ###output = pickle.load(open(out_filename, 'rb'))
 ###n_ray_path= output['N_ray_path']

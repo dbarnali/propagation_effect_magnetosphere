@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 global interp_rho,interp_dn_dr,interp_dn_dtheta,interp_dn_dphi
 
-filedir	='/home/dbarnali/postdoc/propagation_effects/density_grid/'
+filedir	='/home/dbarnali/postdoc/propagation_effects/input_output_for_density_grid/'
 
 filename		='smoothed_rho_RRM_magnetic_frame_hd133880_bigger.h5'
 f1			=h5py.File(filedir+filename,'r') 
