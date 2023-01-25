@@ -22,7 +22,6 @@ cdef double get_plasma_freq(double n_p0,double r,double theta,double phi,float r
 	cdef double n_e=prop_tool_density.density_func(n_p0,r,theta,phi,r_max,rho_fact) #in cgs
 	return 9.0*10.**(-3)*sqrt(n_e) # in MHz
 '''
-
 cpdef double density_func(double n_p0,double r,double theta,double phi,float r_max): #already cythonized
 	cdef double theta0, r0, y, z, x, sigma, factor, n_e
 	cdef float M
@@ -36,7 +35,6 @@ cpdef double density_func(double n_p0,double r,double theta,double phi,float r_m
 	factor	=1.5*2	# To fiddle with the extent of the density enhancement from the magnetic equator along the Z-axis
 	n_e	=0*100*(n_p0/r)*exp(-(factor*z**2)/sigma**2)*(1-y)+n_p0/r
 	return n_e
-
 cdef double delta_n_delta_theta(double n_p0,double r,double theta,double phi,float r_max): #already cythonized
 	cdef double theta0, r0, y, z, x, sigma, factor, dz_dt, dx_dt, dsigma_dt, dn_dt
 	cdef float M=5.0
@@ -52,7 +50,6 @@ cdef double delta_n_delta_theta(double n_p0,double r,double theta,double phi,flo
 	dsigma_dt=(-2.*sigma*r_max*x*dx_dt)/(x**2.+r_max)**2.
 	dn_dt	=-2*0*100*(n_p0/r)*(1-y)*exp(-(factor*z**2)/sigma**2)*factor*(((z*dz_dt)/sigma**2)-(z**2/sigma**3)*dsigma_dt)
 	return dn_dt
-
 cdef double delta_n_delta_phi(double n_p0,double r,double theta,double phi,float r_max): #already cythonized
 	cdef double theta0, dtheta0_dphi, r0, y, z, x, sigma, factor, dz_dphi, dx_dphi, dsigma_dphi, dn_dphi
 	cdef float M=5.0
@@ -69,7 +66,6 @@ cdef double delta_n_delta_phi(double n_p0,double r,double theta,double phi,float
 	dsigma_dphi=(-2.*sigma*r_max*x*dx_dphi)/(x**2+r_max)**2
 	dn_dphi	=-2*0*100*(n_p0/r)*(1-y)*exp(-(factor*z**2)/sigma**2)*factor*(((z*dz_dphi)/sigma**2)-(z**2/sigma**3)*dsigma_dphi)
 	return dn_dphi
-
 cdef double delta_n_delta_r(double n_p0,double r,double theta,double phi,float r_max): #already cythonized
 	cdef double theta0, r0, y, z, x, sigma, factor, dy_dr, dz_dr, dx_dr, dsigma_dr, n_e, part1, part2
 	cdef float M=5.0
@@ -616,6 +612,7 @@ cpdef ray_path(double r0,double theta0,double phi0,double theta_dash0,double phi
 	PyMem_Free(dy1_dr)
 	PyMem_Free(dy2_dr)
 	return True,np.array([my_r,my_theta,my_phi,my_theta_dash,my_phi_dash,my_mu])
+
 
 
 

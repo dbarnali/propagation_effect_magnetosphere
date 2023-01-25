@@ -2,79 +2,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import optimize
 from scipy.integrate import odeint
+from scipy.integrate import ode
 from scipy.special import comb
 from scipy.interpolate import RegularGridInterpolator
 import os
 from global_vars import *
+import propagation_effect_tools_density_func as prop_tool_density
 
-def delta_x_delta_r(r,theta,phi):
-	return np.sin(theta)*np.cos(phi)
-
-def delta_y_delta_r(r,theta,phi):
-	return np.sin(theta)*np.sin(phi)
-
-def delta_z_delta_r(r,theta,phi):
-	return np.cos(theta)
-
-def delta_x_delta_theta(r,theta,phi):
-	return r*np.cos(theta)*np.cos(phi)
-
-def delta_y_delta_theta(r,theta,phi):
-	return r*np.cos(theta)*np.sin(phi)
-
-def delta_z_delta_theta(r,theta,phi):
-	return -r*np.sin(theta)
-
-def delta_x_delta_phi(r,theta,phi):
-	return -r*np.sin(theta)*np.sin(phi)
-
-def delta_y_delta_phi(r,theta,phi):
-	return r*np.sin(theta)*np.cos(phi)
-
-def density_func(r,theta,phi,n_p0,interp_rho,rho_fact):
-	x,y,z=r*np.sin(theta)*np.cos(phi),r*np.sin(theta)*np.sin(phi),r*np.cos(theta)
-	rho	=n_p0*((1./r)+(rho_fact*interp_rho([x,y,z])[0]))
-	return rho
-
-def delta_n_delta_theta(r,theta,phi,n_p0,dn_dx,dn_dy,dn_dz,rho_fact): 
-	#x,y,z			=r*np.sin(theta)*np.cos(phi),r*np.sin(theta)*np.sin(phi),r*np.cos(theta)
-	#dn_dx,dn_dy,dn_dz	=interp_dn_dx([x,y,z])[0],interp_dn_dy([x,y,z]),interp_dn_dz([x,y,z])
-	dx_dtheta		=delta_x_delta_theta(r,theta,phi)
-	dy_dtheta		=delta_y_delta_theta(r,theta,phi)
-	dz_dtheta		=delta_z_delta_theta(r,theta,phi)
-	dn_RRM			=dn_dx*dx_dtheta+dn_dy*dy_dtheta+dn_dz*dz_dtheta
-	dn_dtheta		=n_p0*rho_fact*dn_RRM
-	return dn_dtheta
-
-def delta_n_delta_phi(r,theta,phi,n_p0,dn_dx,dn_dy,dn_dz,rho_fact): 
-	#x,y,z			=r*np.sin(theta)*np.cos(phi),r*np.sin(theta)*np.sin(phi),r*np.cos(theta)
-	dx_dphi			=delta_x_delta_phi(r,theta,phi)
-	dy_dphi			=delta_y_delta_phi(r,theta,phi)
-	dz_dphi			=0.
-	dn_RRM			=dn_dx*dx_dphi+dn_dy*dy_dphi+dn_dz*dz_dphi
-	dn_dphi			=n_p0*rho_fact*dn_RRM
-	return dn_dphi
-
-def delta_n_delta_r(r,theta,phi,n_p0,dn_dx,dn_dy,dn_dz,rho_fact):
-	#x,y,z			=r*np.sin(theta)*np.cos(phi),r*np.sin(theta)*np.sin(phi),r*np.cos(theta)
-	dx_dr			=delta_x_delta_r(r,theta,phi)
-	dy_dr			=delta_y_delta_r(r,theta,phi)
-	dz_dr			=delta_z_delta_r(r,theta,phi)
-	dn_RRM			=dn_dx*dx_dr+dn_dy*dy_dr+dn_dz*dz_dr
-	dn_dr			=n_p0*((-1./r**2)+(rho_fact*dn_RRM))
-	return dn_dr
-
-
+theta_phi_dash0=np.zeros(2)
 #############################################################
 def get_plasma_freq(n_e):
-	return 9000.0*10**(-6)*np.sqrt(n_e) # in MHz
+	return 9.0*10.**(-3)*np.sqrt(n_e) # in MHz
 
 def delta_nu_p_delta_theta(nu_p,dn_dtheta): ##### To introduce non-ideal density distribution
-	alpha	=9000.0*10**(-6)
+	alpha	=9.0*10.**(-3)
 	return (alpha**2/(2*nu_p))*dn_dtheta
 
 def delta_nu_p_delta_phi(nu_p,dn_dphi): ##### To introduce non-ideal density distribution
-	alpha	=9000.0*10**(-6)
+	alpha	=9.0*10.**(-3)
 	return (alpha**2/(2*nu_p))*dn_dphi
 
 def delta_nu_p_delta_theta_dash(nu_p,r,theta,phi): ##### To introduce non-ideal density distribution
@@ -273,7 +218,7 @@ def delta_F_delta_phi(mu,G,cos_psi,nu_p,nu_B,sigma,tau,nu,mode,r,theta,phi,theta
 	dnu_p_dphi		=delta_nu_p_delta_phi(nu_p,dn_dphi)
 	dsigma_dphi		=delta_sigma_delta_phi(nu,nu_p,nu_B,cos_psi,dnuB_dphi,dcos2psi_dphi,dnu_p_dphi)
 	dtau_dphi		=delta_tau_delta_phi(sigma,cos_psi,dsigma_dphi,dcos2psi_dphi,nu_p,nu)
-	dmu_dphi		=delta_mu_delta_phi(mu,cos_psi,nu_p,nu_B,tau,dcos2psi_dphi,dnu_p_dphi,dnuB_dphi,dtau_dphi,nu,mode)
+	dmu_dphi		=delta_mu_delta_phi(mu,cos_psi,nu_p,nu_B,tau,dcos2psi_dphi,dnu_p_dphi,dnuB_dphi,dtau_dphi,nu,mode)        
 	return G*dmu_dphi
 
 def delta_F_delta_theta_dash(mu,G,cos_psi,nu_p,nu_B,sigma,tau,nu,mode,r,theta,phi,theta_dash,phi_dash):
@@ -297,42 +242,12 @@ def delta_F_delta_phi_dash(mu,G,cos_psi,nu_p,nu_B,sigma,tau,nu,mode,r,theta,phi,
 	dG_dphi_dash	=delta_G_delta_phi_dash(G,r,theta,phi,theta_dash,phi_dash)
 	return mu*dG_dphi_dash+G*dmu_dphi_dash
 
-def find_pos_for_interp_func_arr(x,y,z,min_x_arr,min_y_arr,min_z_arr,max_x_arr,max_y_arr,max_z_arr):
-	if x>=0:
-		posx=np.where(max_x_arr>=x)[0]
-	else:
-		posx=np.where(min_x_arr<=x)[0]
-	if y>=0:
-		posy=np.where(max_y_arr>=y)[0]
-	else:
-		posy=np.where(min_y_arr<=y)[0]	
-	if z>=0:
-		posz=np.where(max_z_arr>=z)[0]
-	else:
-		posz=np.where(min_z_arr<=z)[0]
-	'''
-	pos1x	=np.where(min_x_arr<=x)[0]
-	pos2x	=np.where(max_x_arr>=x)[0]
-	posx	=np.intersect1d(pos1x,pos2x)
-	pos1y	=np.where(min_y_arr<=y)[0]
-	pos2y	=np.where(max_y_arr>=y)[0]
-	posy	=np.intersect1d(pos1y,pos2y)
-	
-	pos1z	=np.where(min_z_arr<=z)[0]
-	pos2z	=np.where(max_z_arr>=z)[0]
-	posz	=np.intersect1d(pos1z,pos2z)
-	'''
-	posxy	=np.intersect1d(posx,posy)
-	
-	posxyz	=np.intersect1d(posxy,posz)[0]
-	#print(posxyz)
-	return posxyz
 
 
-def minimize_func(theta_phi_dash,r,theta,phi,Y,Bp,nu,mode,n_p0,interp_rho,rho_fact):
+def minimize_func(theta_phi_dash,r,theta,phi,Y,n_p0,Bp,nu,mode,r_max,rho_fact):
 	theta_dash,phi_dash	=theta_phi_dash[0],theta_phi_dash[1]
 	cos_psi			=get_cos_ang_bet_prop_vect_B_vect(r,theta,phi,theta_dash,phi_dash)
-	my_rho			=density_func(r,theta,phi,n_p0,interp_rho,rho_fact)	
+	my_rho			=prop_tool_density.density_func(n_p0,r,theta,phi,r_max,rho_fact)	
 	nu_p			=get_plasma_freq(my_rho)
 	nu_B			=get_cyclotron_freq(r,theta,Bp)
 	sigma			=get_sigma(nu,nu_p,nu_B,cos_psi)
@@ -343,170 +258,124 @@ def minimize_func(theta_phi_dash,r,theta,phi,Y,Bp,nu,mode,n_p0,interp_rho,rho_fa
 	dF_dphi_dash		=delta_F_delta_phi_dash(mu,G,cos_psi,nu_p,nu_B,sigma,tau,nu,mode,r,theta,phi,theta_dash,phi_dash)
 	return Y-np.array([dF_dtheta_dash,dF_dphi_dash])
 
-
-def ray_path(r0,theta0,phi0,theta_dash0,phi_dash0,r_max,n_p0,Bp,nu,mode,rho_fact,min_x5_arr,min_y5_arr,min_z5_arr,max_x5_arr,max_y5_arr,max_z5_arr,tol=1e-9):
-	max_arr5			=min(max(max_x5_arr),max(max_y5_arr),max(max_z5_arr))
-
-	z0	=r0*np.cos(theta0)
-	r,theta,phi,mu,Y1,Y2	=[],[],[],[],[],[]
-	theta_dash,phi_dash	=[],[]
-	dy1_dr,dy2_dr		=[],[]
-
-	r.append(r0)
-	theta.append(theta0)
-	phi.append(phi0)
-	theta_dash.append(theta_dash0)
-	phi_dash.append(phi_dash0)
-	
-	cos_psi0		=get_cos_ang_bet_prop_vect_B_vect(r0,theta0,phi0,theta_dash0,phi_dash0)
-	x,y,z			=r0*np.sin(theta0)*np.cos(phi0),r0*np.sin(theta0)*np.sin(phi0),r0*np.cos(theta0)
-	 
-	if abs(x)<max_arr5 and abs(y)<max_arr5 and abs(z)<max_arr5:	
-		i_pos			=find_pos_for_interp_func_arr(x,y,z,min_x5_arr,min_y5_arr,min_z5_arr,max_x5_arr,max_y5_arr,max_z5_arr)
-		interp_rho5		=interp_rho5_arr[i_pos]
-		interp_dn_dx5		=interp_dn_dx5_arr[i_pos]
-		interp_dn_dy5		=interp_dn_dy5_arr[i_pos]
-		interp_dn_dz5		=interp_dn_dz5_arr[i_pos]
-
-		rho0			=density_func(r0,theta0,phi0,n_p0,interp_rho5,rho_fact)
-		dn_dx,dn_dy,dn_dz	=interp_dn_dx5([x,y,z])[0],interp_dn_dy5([x,y,z])[0],interp_dn_dz5([x,y,z])[0]
-	else:
-		rho0			=density_func(r0,theta0,phi0,n_p0,interp_rho20,rho_fact)
-		dn_dx,dn_dy,dn_dz	=interp_dn_dx20([x,y,z])[0],interp_dn_dy20([x,y,z])[0],interp_dn_dz20([x,y,z])[0]	
-
-	drho0_dr		=delta_n_delta_r(r0,theta0,phi0,n_p0,dn_dx,dn_dy,dn_dz,rho_fact)
-	drho0_dtheta		=delta_n_delta_theta(r0,theta0,phi0,n_p0,dn_dx,dn_dy,dn_dz,rho_fact)
-	drho0_dphi		=delta_n_delta_phi(r0,theta0,phi0,n_p0,dn_dx,dn_dy,dn_dz,rho_fact)
-	
-	nu_p0	=get_plasma_freq(rho0)
-	nu_B0	=get_cyclotron_freq(r0,theta0,Bp)
-	sigma0	=get_sigma(nu,nu_p0,nu_B0,cos_psi0)
-	tau0	=get_tau(sigma0,cos_psi0,nu_p0,nu)
-	G0	=G_func(r0,theta0,theta_dash0,phi_dash0) 
-	mu0	=get_refractive_index(nu_p0,nu_B0,tau0,cos_psi0,nu,mode)
-
-	mu.append(mu0)
-	Y1.append(delta_F_delta_theta_dash(mu0,G0,cos_psi0,nu_p0,nu_B0,sigma0,tau0,nu,mode,r0,theta0,phi0,theta_dash0,phi_dash0))
-	Y2.append(delta_F_delta_phi_dash(mu0,G0,cos_psi0,nu_p0,nu_B0,sigma0,tau0,nu,mode,r0,theta0,phi0,theta_dash0,phi_dash0))
-	dy1_dr.append(delta_F_delta_theta(mu0,G0,cos_psi0,nu_p0,nu_B0,sigma0,tau0,nu,mode,r0,theta0,phi0,theta_dash0,phi_dash0,drho0_dtheta))
-	dy2_dr.append(delta_F_delta_phi(mu0,G0,cos_psi0,nu_p0,nu_B0,sigma0,tau0,nu,mode,r0,theta0,phi0,theta_dash0,phi_dash0,drho0_dphi))
-
-	cont	=True
-	i	=0
-	while(cont==True):
-		x,y,z			=r[i]*np.sin(theta[i])*np.cos(phi[i]),r[i]*np.sin(theta[i])*np.sin(phi[i]),r[i]*np.cos(theta[i])
-		if abs(x)<max_arr5 and abs(y)<max_arr5 and abs(z)<max_arr5:
-			i_pos			=find_pos_for_interp_func_arr(x,y,z,min_x5_arr,min_y5_arr,min_z5_arr,max_x5_arr,max_y5_arr,max_z5_arr)
-			#print(i_pos,len(interp_rho5_arr),'inside while loop',i,x,y,z)
-			interp_rho5		=interp_rho5_arr[i_pos]
-			#print(interp_rho5)
-			interp_dn_dx5		=interp_dn_dx5_arr[i_pos]
-			interp_dn_dy5		=interp_dn_dy5_arr[i_pos]
-			interp_dn_dz5		=interp_dn_dz5_arr[i_pos]
-
-			my_rho			=density_func(r[i],theta[i],phi[i],n_p0,interp_rho5,rho_fact)
-			dn_dx,dn_dy,dn_dz	=interp_dn_dx5([x,y,z])[0],interp_dn_dy5([x,y,z])[0],interp_dn_dz5([x,y,z])[0]
-		else:
-			my_rho			=density_func(r[i],theta[i],phi[i],n_p0,interp_rho20,rho_fact)
-			dn_dx,dn_dy,dn_dz	=interp_dn_dx20([x,y,z])[0],interp_dn_dy20([x,y,z])[0],interp_dn_dz20([x,y,z])[0]
-	
-		my_drho_dr		=delta_n_delta_r(r[i],theta[i],phi[i],n_p0,dn_dx,dn_dy,dn_dz,rho_fact)
-		my_drho_dtheta		=delta_n_delta_theta(r[i],theta[i],phi[i],n_p0,dn_dx,dn_dy,dn_dz,rho_fact)
-		my_drho_dphi		=delta_n_delta_phi(r[i],theta[i],phi[i],n_p0,dn_dx,dn_dy,dn_dz,rho_fact)
-		
-		length_scale	=[]
-		l_r		=abs(my_rho/my_drho_dr)
-		length_scale.append(l_r)
-		if abs(my_drho_dtheta)>tol:
-			delta_theta	=my_rho/my_drho_dtheta
-			l_theta		=abs(r[i]*delta_theta)
-			length_scale.append(l_theta)
-		if abs(my_drho_dphi)>tol:
-			delta_phi	=my_rho/my_drho_dphi
-			l_phi		=abs(r[i]*np.sin(theta[i])*delta_phi)
-			length_scale.append(l_phi)
-		
-		dr_1	=min(length_scale)/500.	#min(l_r,l_theta,l_phi)/200.
-		dr	=dr_1*(np.sqrt(r[i]**2+z0**2-2*r[i]*z0*np.cos(theta[i]))/(r[i]-z0*np.cos(theta[i])+r[i]*z0*np.sin(theta[i])*theta_dash[i]))
-
-		r.append(r[i]+dr)
-		theta.append(theta[i]+theta_dash[i]*dr)
-		phi.append(phi[i]+phi_dash[i]*dr)
-		Y1.append(Y1[i]+dy1_dr[i]*dr)
-		Y2.append(Y2[i]+dy2_dr[i]*dr)
-		ini_guess	=np.array([theta_dash[i],phi_dash[i]])
-		Y_arr		=np.array([Y1[i+1],Y2[i+1]])
-		x,y,z		=r[i+1]*np.sin(theta[i+1])*np.cos(phi[i+1]),r[i+1]*np.sin(theta[i+1])*np.sin(phi[i+1]),r[i+1]*np.cos(theta[i+1])
-		#print(x,y,z)
-		if abs(x)<max_arr5 and abs(y)<max_arr5 and abs(z)<max_arr5:	
-			i_pos			=find_pos_for_interp_func_arr(x,y,z,min_x5_arr,min_y5_arr,min_z5_arr,max_x5_arr,max_y5_arr,max_z5_arr)
-			
-			interp_rho5		=interp_rho5_arr[i_pos]
-
-			ans		=optimize.root(minimize_func,x0=ini_guess,args=(r[i+1],theta[i+1],phi[i+1],Y_arr,Bp,nu,mode,n_p0,interp_rho5,rho_fact))
-		else:
-			ans		=optimize.root(minimize_func,x0=ini_guess,args=(r[i+1],theta[i+1],phi[i+1],Y_arr,Bp,nu,mode,n_p0,interp_rho20,rho_fact))			
-		if ans['success']==True:
-			theta_dash.append(ans['x'][0])
-			phi_dash.append(ans['x'][1])
-			'''
-			comp_num	=min(max_x5_arr)
-			if x<0 and x>comp_num:
-				print(x,y,z,i)
-			if y<0 and y>comp_num:
-				print(x,y,z,i)
-			if z<0 and z>comp_num:
-				print(x,y,z,i)
-			'''
-		else:
-			
-			#print(x,y,z,i,'\nFor nu='+str(nu)+' MHz, R_A='+str(r_max)+', np0='+str(n_p0)+' theta_dash & phi_dash cannot be found\nchange initial guess')
-			#raise KeyboardInterrupt
-			comp_num	=min(max_x5_arr)
-			ch1	=x>0 or x<comp_num
-			ch2	=y>0 or y<comp_num
-			ch3	=z>0 or z<comp_num
-			if ch1==True and ch2==True and ch3==True:
-				print(i,x,y,z)
-			'''
-			if x>0 or x<comp_num:
-				print(x,y,z,i)
-			if y>0 or y<comp_num:
-				print(x,y,z,i)
-			if z>0 or z<comp_num:
-				print(x,y,z,i)
-			'''
-			return False,0
-
-		cos_psi		=get_cos_ang_bet_prop_vect_B_vect(r[i+1],theta[i+1],phi[i+1],theta_dash[i+1],phi_dash[i+1])
-		
-		if abs(x)<max_arr5 and abs(y)<max_arr5 and abs(z)<max_arr5:
-			i_pos			=find_pos_for_interp_func_arr(x,y,z,min_x5_arr,min_y5_arr,min_z5_arr,max_x5_arr,max_y5_arr,max_z5_arr)
-			#print(i_pos,len(interp_rho5_arr),'further deeper inside while loop',i,x,y,z)
-			interp_rho5		=interp_rho5_arr[i_pos]
-			my_rho	=density_func(r[i+1],theta[i+1],phi[i+1],n_p0,interp_rho5,rho_fact)
-		else:
-			my_rho	=density_func(r[i+1],theta[i+1],phi[i+1],n_p0,interp_rho20,rho_fact)	
+def test_func(r,full_y_arr,n_p0, Bp, nu, mode, r_max, rho_fact):
+	#print(theta_phi_dash0,r)
+	theta,phi,Y1,Y2 =full_y_arr[0],full_y_arr[1],full_y_arr[2],full_y_arr[3]
+	Y_arr		=np.array([Y1,Y2])
+	ini_guess       =np.array([theta_phi_dash0[0],theta_phi_dash0[1]])
+	ans		=optimize.root(minimize_func,x0=ini_guess,args=(r,theta,phi,Y_arr,n_p0,Bp,nu,mode,r_max,rho_fact))		
+	if ans['success']==True:
+		theta_phi_dash0[0]	=ans['x'][0]
+		theta_phi_dash0[1]	=ans['x'][1]
+		dtheta_dr  =theta_phi_dash0[0]
+		dphi_dr  =theta_phi_dash0[1]
+		cos_psi		=get_cos_ang_bet_prop_vect_B_vect(r,theta,phi,dtheta_dr,dphi_dr)
+		my_rho		=prop_tool_density.density_func(n_p0,r,theta,phi,r_max,rho_fact)
 		nu_p		=get_plasma_freq(my_rho)
-		nu_B		=get_cyclotron_freq(r[i+1],theta[i+1],Bp)
+		nu_B		=get_cyclotron_freq(r,theta,Bp)
 		sigma		=get_sigma(nu,nu_p,nu_B,cos_psi)
 		tau		=get_tau(sigma,cos_psi,nu_p,nu)
-		mu.append(get_refractive_index(nu_p,nu_B,tau,cos_psi,nu,mode))
+		mu		=get_refractive_index(nu_p,nu_B,tau,cos_psi,nu,mode)
+		G		=G_func(r,theta,dtheta_dr,dphi_dr)
+		dn_dtheta       =prop_tool_density.delta_n_delta_theta(n_p0, r,  theta,  phi, r_max,  rho_fact)
+		dn_dphi         =prop_tool_density.delta_n_delta_phi(n_p0, r,  theta,  phi, r_max,  rho_fact)
+		dy1_dr	        =delta_F_delta_theta(mu,G,cos_psi,nu_p,nu_B,sigma,tau,nu,mode,r,theta,phi,dtheta_dr,dphi_dr,dn_dtheta)
+		dy2_dr	        =delta_F_delta_phi(mu,G,cos_psi,nu_p,nu_B,sigma,tau,nu,mode,r,theta,phi,dtheta_dr,dphi_dr,dn_dphi)
 
-		G		=G_func(r[i+1],theta[i+1],theta_dash[i+1],phi_dash[i+1])
-		dy1_dr.append(delta_F_delta_theta(mu[i+1],G,cos_psi,nu_p,nu_B,sigma,tau,nu,mode,r[i+1],theta[i+1],phi[i+1],theta_dash[i+1],phi_dash[i+1],my_drho_dtheta))
-		dy2_dr.append(delta_F_delta_phi(mu[i+1],G,cos_psi,nu_p,nu_B,sigma,tau,nu,mode,r[i+1],theta[i+1],phi[i+1],theta_dash[i+1],phi_dash[i+1],my_drho_dphi))
-	
-		if (r[i+1]/(r_max*np.sin(theta[i+1])**2))<1:
-			cont=True
-			i+=1
+		return np.array([dtheta_dr,dphi_dr,dy1_dr,dy2_dr])
+
+	else:
+		print('theta_dash and phi_dash could not be solved')
+		raise KeyboardInterrupt
+
+def convert_spherical_to_cartesian_coord(V,r,theta,phi): 
+	V_r	=V[0]
+	V_theta	=V[1]
+	V_phi	=V[2]
+	V_cart  =np.zeros(3)
+	V_cart[0]	=V_r*np.sin(theta)*np.cos(phi)+V_theta*np.cos(theta)*np.cos(phi)-V_phi*np.sin(phi)
+	V_cart[1]	=V_r*np.sin(theta)*np.sin(phi)+V_theta*np.cos(theta)*np.sin(phi)+V_phi*np.cos(phi)
+	V_cart[2]	=V_r*np.cos(theta)-V_theta*np.sin(theta)
+	return V_cart
+
+def ray_path_using_scipy(r0, theta0, phi0, theta_dash0, phi_dash0, r_max, n_p0, Bp, nu, mode, rho_fact, len_r=10**3):
+	#print(r0,theta0,phi0,theta_dash0,phi_dash0,r_max,n_p0,Bp,nu,mode,len_r)
+	theta_phi_dash0[0]=theta_dash0
+	theta_phi_dash0[1]=phi_dash0
+	z0		=r0*np.cos(theta0)
+	k_ini   	=np.array([1,r0*theta_dash0,r0*np.sin(theta0)*phi_dash0])
+	k_ini_cart      =convert_spherical_to_cartesian_coord(k_ini,r0,theta0,phi0)
+
+	cos_psi0	=get_cos_ang_bet_prop_vect_B_vect(r0,theta0,phi0,theta_dash0,phi_dash0)
+	rho0            =prop_tool_density.density_func(n_p0,r0,theta0,phi0,r_max,rho_fact)
+	nu_p0		=get_plasma_freq(rho0)
+	nu_B0		=get_cyclotron_freq(r0,theta0,Bp)
+	sigma0		=get_sigma(nu,nu_p0,nu_B0,cos_psi0)
+	tau0		=get_tau(sigma0,cos_psi0,nu_p0,nu)
+	G0		=G_func(r0,theta0,theta_dash0,phi_dash0) 
+	mu0		=get_refractive_index(nu_p0,nu_B0,tau0,cos_psi0,nu,mode)
+
+	Y10		=delta_F_delta_theta_dash(mu0,G0,cos_psi0,nu_p0,nu_B0,sigma0,tau0,nu,mode,r0,theta0,phi0,theta_dash0,phi_dash0)
+	Y20		=delta_F_delta_phi_dash(mu0,G0,cos_psi0,nu_p0,nu_B0,sigma0,tau0,nu,mode,r0,theta0,phi0,theta_dash0,phi_dash0)
+
+	full_y0_arr     =np.array([theta0,phi0,Y10,Y20])
+	val             =ode(test_func).set_integrator('vode',method='bdf')
+	val.set_initial_value(full_y0_arr,r0).set_f_params(n_p0, Bp,nu, mode,r_max, rho_fact)
+	r               =np.linspace(r0,r_max,len_r)
+	theta           =np.zeros(len_r)
+	phi             =np.zeros(len_r)
+	theta_dash      =np.zeros(len_r)
+	phi_dash        =np.zeros(len_r)
+	mu              =np.zeros(len_r)
+	dt              =r[1]-r[0]
+	theta[0],phi[0] =theta0,phi0
+	theta_dash[0]   =theta_dash0
+	phi_dash[0]     =phi_dash0
+	mu[0]           =mu0
+	count           =1
+	while(val.successful()==True):
+		#print('my r value is',r[count-1])
+		ans =val.integrate(val.t+dt)
+		theta[count]    =ans[0]
+		phi[count]      =ans[1]
+		Y_arr   =np.array([ans[2],ans[3]])
+		#print(theta_phi_dash0)
+		new_ans =optimize.root(minimize_func,x0=theta_phi_dash0,args=(r[count],theta[count],phi[count],Y_arr,n_p0,Bp,nu,mode,r_max,rho_fact))
+		if new_ans['success']==True:
+			theta_dash[count]   =new_ans['x'][0]
+			phi_dash[count]     =new_ans['x'][1]
+			cos_psi		    =get_cos_ang_bet_prop_vect_B_vect(r[count],theta[count],phi[count],theta_dash[count],phi_dash[count])
+			rho                 =prop_tool_density.density_func(n_p0,r[count],theta[count],phi[count],r_max,rho_fact)
+			nu_p		    =get_plasma_freq(rho)
+			nu_B		    =get_cyclotron_freq(r[count],theta[count],Bp)
+			sigma		    =get_sigma(nu,nu_p,nu_B,cos_psi)
+			tau		    =get_tau(sigma,cos_psi,nu_p,nu)
+			mu[count]	    =get_refractive_index(nu_p,nu_B,tau,cos_psi,nu,mode)
+			theta_phi_dash0[0]  =theta_dash[count]
+			theta_phi_dash0[1]  =phi_dash[count]
+			count               =count+1
 		else:
-			cont=False
-	
-	r,theta,phi,mu		=np.array(r),np.array(theta),np.array(phi),np.array(mu)
-	theta_dash,phi_dash	=np.array(theta_dash),np.array(phi_dash)
-	
+			print('theta_dash and phi_dash could not be solved')
+			raise KeyboardInterrupt
+
+		if  (r[count-1]/(r_max*np.sin(theta[count-1])**2))>1 or count==len_r:
+			#print('count=',count,'I have reached the edge')
+			break
+
+	if (r[count-1]/(r_max*np.sin(theta[count-1])**2))<1:
+		print('\n',r[count-1]/(r_max*np.sin(theta[count-1])**2,'The array length is insufficient to sample to inner magnetosphere. Increase len_r\n'))
+		raise KeyboardInterrupt
+	if count<len_r:
+		r           =r[:count]
+		theta       =theta[:count]
+		phi         =phi[:count]
+		theta_dash  =theta_dash[:count]
+		phi_dash    =phi_dash[:count]
+		mu          =mu[:count]
+    
 	return True,np.array([r,theta,phi,theta_dash,phi_dash,mu])
+
+
 
 
 
