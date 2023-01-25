@@ -46,14 +46,14 @@ def find_ray_path_given_ini_cond(
         L,
         n_p0,
         Bp,
-        rho_fact):
+        rho_fact,len_r=100):
     #print(nu, ini_is_true)
     if ini_is_true == 1:
         r0, theta0, phi0, theta_dash0, phi_dash0 = ini_arr
 
         #print('Calling ray path')
         is_true, full_ray_path = prop_tool_solve_int.ray_path_using_scipy(
-            r0, theta0, phi0, theta_dash0, phi_dash0, R_A, n_p0, Bp, nu, mode, rho_fact, 10**2)
+            r0, theta0, phi0, theta_dash0, phi_dash0, R_A, n_p0, Bp, nu, mode, rho_fact, len_r)
         # print(is_true)
         if is_true:
             r, theta, phi, theta_dash, phi_dash, mu = full_ray_path
@@ -74,23 +74,23 @@ def find_ray_path_given_ini_cond(
     return is_true, ray_path
 
 
-def main_func(phi01, mode, harm_no, nu, R_A, L, n_p0, Bp, rho_fact):
+def main_func(phi01, mode, harm_no, nu, R_A, L, n_p0, Bp, rho_fact,len_r=100):
     print(phi01, (L / R_A) - 1, nu)
     ini_is_true_arr, ini_arr = prop_tool_ini_cond.get_initial_condition(
         nu, harm_no, Bp, L, R_A, phi01, n_p0, mode, rho_fact)
     #print(ini_is_true_arr,'initial_condition')
 
     n_is_true1, n_ray_path1 = find_ray_path_given_ini_cond(
-        'N', phi01, ini_is_true_arr[0], ini_arr[0], mode, harm_no, nu, R_A, L, n_p0, Bp, rho_fact)
+        'N', phi01, ini_is_true_arr[0], ini_arr[0], mode, harm_no, nu, R_A, L, n_p0, Bp, rho_fact,len_r)
     #print(phi01, 'I am back')
     n_is_true2, n_ray_path2 = find_ray_path_given_ini_cond(
-        'N', phi01, ini_is_true_arr[1], ini_arr[1], mode, harm_no, nu, R_A, L, n_p0, Bp, rho_fact)
+        'N', phi01, ini_is_true_arr[1], ini_arr[1], mode, harm_no, nu, R_A, L, n_p0, Bp, rho_fact,len_r)
     #print(phi01, 'I am back2')
     s_is_true1, s_ray_path1 = find_ray_path_given_ini_cond(
-        'S', phi01, ini_is_true_arr[2], ini_arr[2], mode, harm_no, nu, R_A, L, n_p0, Bp, rho_fact)
+        'S', phi01, ini_is_true_arr[2], ini_arr[2], mode, harm_no, nu, R_A, L, n_p0, Bp, rho_fact,len_r)
     #print(phi01, 'I am back3')
     s_is_true2, s_ray_path2 = find_ray_path_given_ini_cond(
-        'S', phi01, ini_is_true_arr[3], ini_arr[3], mode, harm_no, nu, R_A, L, n_p0, Bp, rho_fact)
+        'S', phi01, ini_is_true_arr[3], ini_arr[3], mode, harm_no, nu, R_A, L, n_p0, Bp, rho_fact,len_r)
     #print(phi01, 'I am back4')
     return [n_is_true1, n_is_true2, s_is_true1, s_is_true2], [
         n_ray_path1, n_ray_path2, s_ray_path1, s_ray_path2]
@@ -186,6 +186,7 @@ def call_main_func(args):
     Bp = args[7]
     core_id = args[8]
     rho_fact = args[9]
+    len_r   =args[10]
     nu0 = (min(nu) + max(nu)) / 2
 
     n_ray_path, s_ray_path = [], []
@@ -194,7 +195,7 @@ def call_main_func(args):
         for k in range(len(nu)):
             for i in range(len(phiBs)):
                 is_true, ray_path = main_func(
-                    phiBs[i], mode, harm_no, nu[k], R_A, L[j], n_p0, Bp, rho_fact)
+                    phiBs[i], mode, harm_no, nu[k], R_A, L[j], n_p0, Bp, rho_fact,len_r)
                 #print('\n*********************', L[j], nu[k], phiBs[i],j,k,i)
                 if is_true[0]:
                     n_ray_path.append(ray_path[0])
@@ -218,22 +219,23 @@ def call_main_func(args):
     pickle.dump(output_ray_paths, open(filename, 'wb'))
 
 
-star_name    ='hd133880'
-#alpha,beta              =46.5*(np.pi/180.0),76.*(np.pi/180.0)	#@@@@@@@@@@@@@@CHECK
-alpha,beta              =55.*(np.pi/180.0),78.*(np.pi/180.0)
+star_name    ='cuv'
+alpha,beta              =46.5*(np.pi/180.0),76.*(np.pi/180.0)	#@@@@@@@@@@@@@@CHECK
+#alpha,beta              =55.*(np.pi/180.0),78.*(np.pi/180.0)
 #alpha,beta              =54.6*(np.pi/180.0),80.*(np.pi/180.0)	#@@@@
-Bp = 9600.	#4000.0
-n_p0 = 10**8
+Bp =4000.0# 9600.	#
+n_p0 = 10**9
 mode = 1.  # 0 means O-mode and 1 means X-mode
 harm_no = 2.01  # harmonic number, must be >1 for X mode
 R_A =15.0#20.
 # l_R_A			=np.linspace(20.,30,5)
 # l_R_A			=np.array([.1])
 L = [18.0]#np.linspace(25., 30, 1)  # (1+l_R_A)*R_A
-nu0 = 600.
+nu0 = 3000.
 dnu = 234 / 2.
 nu = [nu0]#np.linspace(nu0 - dnu, nu0 + dnu, 1)
-rho_fact =0.01
+rho_fact =100.
+len_r   =100
 out_dir         ='/home/dbarnali/postdoc/propagation_effects/input_output_for_density_grid/'
 
 if mode == 1:
@@ -242,7 +244,7 @@ if mode == 0:
     out_filename =out_dir+ 'cython_O_mode_' + str(int(nu0)) + 'MHz_density_RRM_'+star_name+'_like_rho_fact_'+str(rho_fact)+'.p'
 
 # phiB	=np.array([1.8824224168936852])	#np.array([86.*(np.pi/180.)])
-len_phib = 180
+len_phib = int(1440)
 #phiB	=np.array([np.pi/2.])
 phiB = np.linspace(0.001, 2 * np.pi - 0.001, len_phib)
 num_cores = min(10, len_phib)
@@ -252,10 +254,10 @@ args_list = []
 for i in range(num_cores):
     try:
         args_list.append([phiB[i * phib_per_core:(i + 1) * phib_per_core],
-                         mode, harm_no, nu, R_A, L, n_p0, Bp, i, rho_fact])
+                         mode, harm_no, nu, R_A, L, n_p0, Bp, i, rho_fact,len_r])
     except IndexError:
         args_list.append([phiB[i * phib_per_core:len_phib],
-                         mode, harm_no, nu, R_A, L, n_p0, Bp, i, rho_fact])
+                         mode, harm_no, nu, R_A, L, n_p0, Bp, i, rho_fact,len_r])
 
 
 parallel_instance = Pool(num_cores)

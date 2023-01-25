@@ -286,7 +286,8 @@ def test_func(r,full_y_arr,n_p0, Bp, nu, mode, r_max, rho_fact):
 
 	else:
 		print('theta_dash and phi_dash could not be solved')
-		raise KeyboardInterrupt
+		return(np.array([np.nan,np.nan,np.nan,np.nan]))
+		#raise KeyboardInterrupt
 
 def convert_spherical_to_cartesian_coord(V,r,theta,phi): 
 	V_r	=V[0]
@@ -299,7 +300,7 @@ def convert_spherical_to_cartesian_coord(V,r,theta,phi):
 	return V_cart
 
 def ray_path_using_scipy(r0, theta0, phi0, theta_dash0, phi_dash0, r_max, n_p0, Bp, nu, mode, rho_fact, len_r=10**3):
-	#print(r0,theta0,phi0,theta_dash0,phi_dash0,r_max,n_p0,Bp,nu,mode,len_r)
+	#print('\n',r0,theta0,phi0,theta_dash0,phi_dash0,r_max,n_p0,Bp,nu,mode,len_r,'\n')
 	theta_phi_dash0[0]=theta_dash0
 	theta_phi_dash0[1]=phi_dash0
 	z0		=r0*np.cos(theta0)
@@ -356,14 +357,14 @@ def ray_path_using_scipy(r0, theta0, phi0, theta_dash0, phi_dash0, r_max, n_p0, 
 			count               =count+1
 		else:
 			print('theta_dash and phi_dash could not be solved')
-			raise KeyboardInterrupt
+			return False,0
 
 		if  (r[count-1]/(r_max*np.sin(theta[count-1])**2))>1 or count==len_r:
 			#print('count=',count,'I have reached the edge')
 			break
 
 	if (r[count-1]/(r_max*np.sin(theta[count-1])**2))<1:
-		print('\n',r[count-1]/(r_max*np.sin(theta[count-1])**2,'The array length is insufficient to sample to inner magnetosphere. Increase len_r\n'))
+		print('\n',r[count-1]/(r_max*np.sin(theta[count-1])**2),'The array length is insufficient to sample to inner magnetosphere. Increase len_r\n')
 		raise KeyboardInterrupt
 	if count<len_r:
 		r           =r[:count]
