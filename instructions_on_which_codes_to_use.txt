@@ -1,0 +1,9 @@
+The master code that will call the other codes is propagation_effect_full_simulation_3D.py.
+
+Note that without a density grid, the code will not run unless the analytical functions for density are used. For that, one will have to replace the line
+
+import propagation_effect_tools_density_func as prop_tool_density
+
+with 
+
+import propagation_effect_tools_density_func_analytical as prop_tool_density
