@@ -5,10 +5,8 @@ import matplotlib.pyplot as plt
 
 global interp_rho,interp_dn_dr,interp_dn_dtheta,interp_dn_dphi
 
-filedir	='/home/dbarnali/postdoc/propagation_effects/input_output_for_density_grid/'
-
-filename		='smoothed_rho_RRM_magnetic_frame_hd133880_bigger.h5'
-f1			=h5py.File(filedir+filename,'r') 
+filename		='smoothed_rho_RRM_magnetic_frame_hd133880_bigger.h5'   #density grid in teh magnetic frame of reference
+f1			=h5py.File(filename,'r') 
 rho			=np.array(f1['rho']) #this is relative density
 phi_arr,r_arr,theta_arr	=np.array(f1['phi_arr']),np.array(f1['r_arr']),np.array(f1['theta_arr'])
 dn_dphi,dn_dr,dn_dtheta	=np.array(f1['drho_dphi']),np.array(f1['drho_dr']),np.array(f1['drho_dtheta'])
