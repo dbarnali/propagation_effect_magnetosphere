@@ -8,7 +8,6 @@ lib_gsl_dir = "/usr/lib/x86_64-linux-gnu/"
 
 #########################################3
 filename1	='propagation_effect_tools_initial_condition_3D_complex_IM_cython'
-#filename2	='propagation_effect_tools_solve_integration_3D_complex_IM_cython'
 filename3	='propagation_effect_tools_density_func'
 
 ext_modules = [Extension(filename1,sources=[filename1+'.pyx'],include_dirs=[numpy.get_include(), include_gsl_dir],libraries=["m",'gsl',"gslcblas"],library_dirs=[lib_gsl_dir]),Extension(filename3,sources=[filename3+'.pyx'],include_dirs=[numpy.get_include(), include_gsl_dir],libraries=["m",'gsl',"gslcblas"],library_dirs=[lib_gsl_dir])]

@@ -7,3 +7,6 @@ import propagation_effect_tools_density_func as prop_tool_density
 with 
 
 import propagation_effect_tools_density_func_analytical as prop_tool_density
+
+In addition, edit the global_vars.py in the following way:
+comment out everything below the declaration of global variables.

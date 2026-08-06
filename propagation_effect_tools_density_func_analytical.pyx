@@ -43,51 +43,6 @@ cdef double normalize_theta(double theta):
         theta1=2*pi-theta1
     return theta1
 
-'''
-cpdef double density_func(double n_p0, double r, double theta, double phi, float r_max, float rho_fact):  # already cythonized
-    cdef double rho,val
-    try:
-        val =  interp_rho([normalize_phi(phi), r, normalize_theta(theta)])[0]
-        if np.isnan(val)==True:
-            val=0.
-        rho = n_p0 * ((1. / r) + (rho_fact *val))
-    except ValueError:
-        print(phi,normalize_phi(phi),normalize_theta(theta),r,'durrrrrrrr')
-    #rho = n_p0 * ((1. / r) + (rho_fact * interp_rho([normalize_phi(phi), r, normalize_theta(theta)])[0]))
-    #print(rho)
-    return rho
-
-# already cythonized
-cpdef double delta_n_delta_theta(double n_p0, double r, double theta, double phi, float r_max, float rho_fact):
-    cdef double dn_dtheta,val
-    val =interp_dn_dtheta([normalize_phi(phi), r, normalize_theta(theta)])[0]
-    if np.isnan(val)==True:
-        val =0.0
-    dn_dtheta = n_p0 * rho_fact * val
-    return dn_dtheta
-
-# already cythonized
-cpdef double delta_n_delta_phi(double n_p0, double r, double theta, double phi, float r_max, float rho_fact):
-    cdef double dn_dphi,val
-    val     = interp_dn_dphi([normalize_phi(phi), r, normalize_theta(theta)])[0]
-    if np.isnan(val)==True:
-        val =0.0
-    dn_dphi = n_p0 * rho_fact * val
-    return dn_dphi
-
-# already cythonized
-cpdef double delta_n_delta_r(double n_p0, double r, double theta, double phi, float r_max, float rho_fact):
-    cdef double dn_dr,val
-    val     = interp_dn_dr([normalize_phi(phi), r, normalize_theta(theta)])[0]
-    if np.isnan(val)==True:
-        val =0.0
-    dn_dr   = n_p0 * ((-1. / r**2) + (rho_fact *
-                   val ))
-    return dn_dr
-
-
-'''
-
 
 cpdef double density_func(double n_p0,double r,double theta,double phi,float r_max, float rho_fact): #already cythonized
     cdef double theta0, r0, y, z, x, sigma, factor, n_e
